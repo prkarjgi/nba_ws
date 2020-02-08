@@ -5,23 +5,31 @@ import os
 import base64
 from urllib.parse import urljoin, quote_plus
 from nba_news.models import Tweet
+from nba_news import db
 
 base_url = 'https://api.twitter.com/'
 
 
-class Twitter_OAuth2():
+class TwitterOAuth2():
     def __init__(self):
-        # d
+        # get consumer key and consumer secret key environment variables
         self.api_key = quote_plus(os.getenv('TWITTER_API_KEY'))
         self.api_secret = quote_plus(os.getenv('TWITTER_API_SECRET'))
 
-        # d
+        # get existing bearer token from environment variable
+        # return None if it doesn't exist
         self.bearer_token = os.getenv('BEARER_TOKEN', None)
 
-        # d
+        # create a credentials string
+        # encode credentials string to bytes and then to base64 encoding
+        # decode bytes credentials to utf-8 string
         self.creds_string = f'{self.api_key}:{self.api_secret}'
         self.creds_bytes = base64.b64encode(self.creds_string.encode('utf-8'))
         self.credentials = self.creds_bytes.decode('utf-8')
+
+        # check if bearer_token is not None
+        if self.bearer_token is not None:
+            self.get_oauth2_bearer_token()
 
     def get_oauth2_bearer_token(self):
         headers = {
@@ -42,38 +50,96 @@ class Twitter_OAuth2():
         }
         data = {'access_token': self.bearer_token}
         r = requests.post(url=resource_url, data=data, headers=headers)
+        assert r.status_code in [200]
         self.invalidate_resp = r
 
 
 class SearchTweet():
     def __init__(self, bearer_token):
-        self.search_url = "https://api.twitter.com/1.1/search/tweets.json"
+        self.base_url = "https://api.twitter.com/1.1/"
+        self.search_url = urljoin(self.base_url, "search/tweets.json")
+        self.rate_limit_status_url = urljoin(
+            self.base_url, "application/rate_limit_status.json"
+        )
         self.params = {}
         self.headers = {'Authorization': f'Bearer {bearer_token}'}
+        self.since_id = ''
 
-    def search(self, params):
+    def get_since_id(self, author):
+        tweet = Tweet.query.filter_by(author=author).order_by(
+            Tweet.tweet_id.desc()
+        ).first()
+        if tweet:
+            self.since_id = str(tweet.tweet_id)
+
+    def make_query(self, author, filters=None):
+        q = ''
+        if author:
+            q = f'from:{author}'
+        if filters:
+            if q:
+                q += ' '
+            q += f'-filters:{filters}'
+        return q
+
+    def make_params(self, author, filters=None, count=None):
+        self.get_since_id(author)
+        if self.since_id:
+            self.params['since_id'] = self.since_id
+        if count:
+            self.params['count'] = str(count)
+        self.params['q'] = self.make_query(author, filters)
+
+    def search(self, author, filters=None, count=None):
+        self.make_params(author, filters, count)
         r = requests.get(
             url=self.search_url,
-            params=params,
+            params=self.params,
             headers=self.headers
         )
         assert r.status_code in [200]
         return r.json()
 
+    def get_rate_limit_status(self, resources=None):
+        payload = {}
+        if resources:
+            payload = {'resources': ','.join(resources)}
+        r = requests.get(
+            url=self.rate_limit_status_url,
+            params=payload,
+            headers=self.headers
+        )
+        assert r.status_code in [200]
+        return r.json()
 
-oauth2 = Twitter_OAuth2()
-if not oauth2.bearer_token:
-    oauth2.get_oauth2_bearer_token()
+    def make_row(self, tweet_resp):
+        tweet_row = {}
+        tweet_row['tweet_id'] = tweet_resp['id']
+        tweet_row['author'] = tweet_resp['user']['screen_name']
+        tweet_row['author_id'] = tweet_resp['user']['id']
+        tweet_row['json_data'] = json.dumps(tweet_resp)
+        return tweet_row
+
+    def write_to_db(self, tweets):
+        tweet_rows = [Tweet(**self.make_row(tweet)) for tweet in tweets]
+        # for tweet in tweets:
+        #     tweet_dict = self.make_row(tweet)
+        #     tweet_row = Tweet(**tweet_dict)
+        db.session.add_all(tweet_rows)
+        db.session.commit()
+
+# params = {
+#     'q': 'from:ShamsCharania -filter:retweets',
+#     'count': '40'
+# }
 
 
-params = {
-    'q': 'from:ShamsCharania -filter:retweets',
-    'count': '40'
-}
+auth = TwitterOAuth2()
+search_object = SearchTweet(auth.bearer_token)
+resp = search_object.search(author='wojespn', filters='retweets', count=2)
+# with open('response_json.json', 'w') as fh:
+#     json.dump(resp, fh, indent=4)
 
-headers = {
-    'Authorization': f'Bearer {oauth2.bearer_token}'
-}
-
-# resp1 = requests.get(url=res_url, params=params, headers=headers)
-# print(json.dumps(resp1.json(), indent=4))
+tweets = resp['statuses']
+print(tweets)
+search_object.write_to_db(tweets)
