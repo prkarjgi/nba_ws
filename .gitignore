@@ -1,9 +1,12 @@
-# 
+# virtual environment dir
 venv/
 
-#
+# 
 __pycache__/
 *.py[cod]
 
-#
+# vs code settings
 .vscode/
+
+# database
+*.db
