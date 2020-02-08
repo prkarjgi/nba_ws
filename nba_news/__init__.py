@@ -15,3 +15,8 @@ migrate = Migrate(app=app, db=db)
 @app.route('/index')
 def index():
     return 'Hello'
+
+
+from nba_news import models
+
+db.create_all()
