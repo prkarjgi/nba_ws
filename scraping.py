@@ -63,7 +63,8 @@ class SearchTweet():
         )
         self.params = {}
         self.headers = {'Authorization': f'Bearer {bearer_token}'}
-        self.since_id = ''
+        self.since_id = None
+        self.max_id = None
 
     def get_since_id(self, author):
         tweet = Tweet.query.filter_by(author=author).order_by(
@@ -83,20 +84,34 @@ class SearchTweet():
         return q
 
     def make_params(self, author, filters=None, count=None):
-        self.get_since_id(author)
         if self.since_id:
             self.params['since_id'] = self.since_id
+        if self.max_id:
+            self.params['max_id'] = self.max_id
         if count:
             self.params['count'] = str(count)
         self.params['q'] = self.make_query(author, filters)
 
-    def search(self, author, filters=None, count=None):
-        self.make_params(author, filters, count)
+    def get_tweets(self, author, filters, count):
+        tweets = []
+        self.get_since_id(author)
+        while(1):
+            self.make_params(author, filters, count)
+            resps = self.search()
+            if not resps['statuses']:
+                break
+            tweets.append(resps['statuses'])
+            self.max_id = min([resp['id'] for resp in resps['statuses']]) - 1
+        self.max_id = None
+        return tweets
+
+    def search(self):
         r = requests.get(
             url=self.search_url,
             params=self.params,
             headers=self.headers
         )
+        print(r.url)
         assert r.status_code in [200]
         return r.json()
 
@@ -122,9 +137,6 @@ class SearchTweet():
 
     def write_to_db(self, tweets):
         tweet_rows = [Tweet(**self.make_row(tweet)) for tweet in tweets]
-        # for tweet in tweets:
-        #     tweet_dict = self.make_row(tweet)
-        #     tweet_row = Tweet(**tweet_dict)
         db.session.add_all(tweet_rows)
         db.session.commit()
 
@@ -133,13 +145,21 @@ class SearchTweet():
 #     'count': '40'
 # }
 
+# ZachLowe_NBA
+
 
 auth = TwitterOAuth2()
 search_object = SearchTweet(auth.bearer_token)
-resp = search_object.search(author='wojespn', filters='retweets', count=2)
+resp = search_object.get_tweets(
+    author='wojespn', filters='retweets', count=2
+)
+
 # with open('response_json.json', 'w') as fh:
 #     json.dump(resp, fh, indent=4)
 
-tweets = resp['statuses']
-print(tweets)
-search_object.write_to_db(tweets)
+print(resp)
+print(len(resp))
+
+# tweets = resp['statuses']
+# print(tweets)
+# search_object.write_to_db(tweets)
