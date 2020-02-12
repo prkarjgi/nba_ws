@@ -1,11 +1,11 @@
 import requests
-from requests_oauthlib import OAuth1
 import json
 import os
 import base64
 from urllib.parse import urljoin, quote_plus
 from nba_news.models import Tweet
 from nba_news import db
+from nba_news.celery import celery
 
 base_url = 'https://api.twitter.com/'
 
@@ -27,8 +27,8 @@ class TwitterOAuth2():
         self.creds_bytes = base64.b64encode(self.creds_string.encode('utf-8'))
         self.credentials = self.creds_bytes.decode('utf-8')
 
-        # check if bearer_token is not None
-        if self.bearer_token is not None:
+        # check if bearer_token is None
+        if self.bearer_token is None:
             self.get_oauth2_bearer_token()
 
     def get_oauth2_bearer_token(self):
@@ -92,19 +92,19 @@ class SearchTweet():
             self.params['count'] = str(count)
         self.params['q'] = self.make_query(author, filters)
 
-    def get_tweets(self, author, filters, count):
+    def get_tweets(self, author, filters=None, count=None):
         tweets = []
         self.get_since_id(author)
         while(1):
             self.make_params(author, filters, count)
-            resps = self.search()
+            resps = self.search().delay()
             if not resps['statuses']:
                 break
-            tweets.append(resps['statuses'])
-            self.max_id = min([resp['id'] for resp in resps['statuses']]) - 1
+            tweets += resps['statuses']
         self.max_id = None
         return tweets
 
+    @celery.task
     def search(self):
         r = requests.get(
             url=self.search_url,
@@ -113,6 +113,10 @@ class SearchTweet():
         )
         print(r.url)
         assert r.status_code in [200]
+        if r.json()['statuses']:
+            self.max_id = min(
+                [resp['id'] for resp in r.json()['statuses']]
+            ) - 1
         return r.json()
 
     def get_rate_limit_status(self, resources=None):
@@ -154,12 +158,8 @@ resp = search_object.get_tweets(
     author='wojespn', filters='retweets', count=2
 )
 
-# with open('response_json.json', 'w') as fh:
-#     json.dump(resp, fh, indent=4)
-
-print(resp)
 print(len(resp))
 
-# tweets = resp['statuses']
-# print(tweets)
-# search_object.write_to_db(tweets)
+print(type(resp[0]))
+
+# search_object.write_to_db(resp)
