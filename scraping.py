@@ -97,14 +97,13 @@ class SearchTweet():
         self.get_since_id(author)
         while(1):
             self.make_params(author, filters, count)
-            resps = self.search().delay()
+            resps = self.search()
             if not resps['statuses']:
                 break
             tweets += resps['statuses']
         self.max_id = None
         return tweets
 
-    @celery.task
     def search(self):
         r = requests.get(
             url=self.search_url,
@@ -152,14 +151,43 @@ class SearchTweet():
 # ZachLowe_NBA
 
 
-auth = TwitterOAuth2()
-search_object = SearchTweet(auth.bearer_token)
-resp = search_object.get_tweets(
-    author='wojespn', filters='retweets', count=2
-)
+# auth = TwitterOAuth2()
+# search_object = SearchTweet(auth.bearer_token)
+# resp = search_object.get_tweets(
+#     author='wojespn', filters='retweets', count=2
+# )
 
-print(len(resp))
+# print(len(resp))
 
-print(type(resp[0]))
+# print(type(resp[0]))
 
 # search_object.write_to_db(resp)
+
+
+@celery.task
+def get_tweets(bearer_token, author, filters=None, count=None):
+    search_object = SearchTweet(bearer_token)
+    tweets = []
+    search_object.get_since_id(author)
+    while(1):
+        search_object.make_params(author, filters, count)
+        resps = search_object.search()
+        if not resps['statuses']:
+            break
+        tweets += resps['statuses']
+    search_object.max_id = None
+    return tweets
+
+
+auth = TwitterOAuth2()
+
+authors = [
+    'wojespn',
+    'ShamsCharania',
+    'ZachLowe_NBA'
+]
+
+tweets = [get_tweets.delay(auth.bearer_token, author) for author in authors]
+
+results = [tweet.result for tweet in tweets if tweet.ready()]
+print(results)
