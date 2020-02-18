@@ -10,6 +10,8 @@ __pycache__/
 
 # database
 *.db
+*.rdb
 
 # miscellaneous
 response_json.json
+
