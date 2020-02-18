@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import os
@@ -10,13 +10,6 @@ db = SQLAlchemy(app=app)
 
 migrate = Migrate(app=app, db=db)
 
-
-@app.route('/')
-@app.route('/index')
-def index():
-    return render_template('index.html')
-
-
-from nba_news import models
+from nba_news import models, routes
 
 db.create_all()

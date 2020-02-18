@@ -9,13 +9,15 @@ class Tweet(db.Model):
     author = db.Column(db.String())
     author_id = db.Column(db.Integer)
     json_data = db.Column(db.Text)
+    search_params = db.Column(db.Text)
     datetime_added = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def __init__(self, tweet_id, author, author_id, json_data):
+    def __init__(self, tweet_id, author, author_id, json_data, search_params):
         self.tweet_id = tweet_id
         self.author = author
         self.author_id = author_id
         self.json_data = json_data
+        self.search_params = search_params
 
     def __repr__(self):
         return f"<Tweet({self.id}, {self.author}, {self.tweet_id})>"
