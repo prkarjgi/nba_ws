@@ -99,25 +99,6 @@ class SearchTweet():
         if search_params.get('q'):
             self.params['q'] = self.build_query(search_params['q'])
 
-    def make_query(self, author, filters=None):
-        q = ''
-        if author:
-            q = f'from:{author}'
-        if filters:
-            if q:
-                q += ' '
-            q += f'-filters:{filters}'
-        return q
-
-    def make_params(self, author, filters=None, count=None):
-        if self.since_id:
-            self.params['since_id'] = self.since_id
-        if self.max_id:
-            self.params['max_id'] = self.max_id
-        if count:
-            self.params['count'] = str(count)
-        self.params['q'] = self.make_query(author, filters)
-
     def get_tweets(self, search_params):
         tweets = []
         self.get_since_id(search_params['q']['author'])

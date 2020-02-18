@@ -1,6 +1,6 @@
 from flask import render_template, url_for, request
-from nba_news import app, db
-from nba_news.models import Tweet
+from nba_ws import app, db
+from nba_ws.models import Tweet
 
 
 @app.route('/')

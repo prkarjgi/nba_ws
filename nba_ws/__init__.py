@@ -10,6 +10,6 @@ db = SQLAlchemy(app=app)
 
 migrate = Migrate(app=app, db=db)
 
-from nba_news import models, routes
+from nba_ws import models, routes
 
 db.create_all()
