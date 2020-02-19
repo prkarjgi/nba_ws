@@ -1,9 +1,0 @@
-{% extends 'base.html' %}
-
-{% block content %}
-    {% if tweets %}
-        {% for tweet in tweets %}
-            {% include '_tweet.html' %}
-        {% endfor %}
-    {% endif %}
-{% endblock content %}

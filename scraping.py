@@ -3,8 +3,9 @@ import json
 import os
 import base64
 from urllib.parse import urljoin, quote_plus
-from nba_news.models import Tweet
-from nba_news import db
+from datetime import datetime
+from nba_ws.models import Tweet
+from nba_ws import db
 from celery_app import celery
 
 base_url = 'https://api.twitter.com/'
@@ -90,6 +91,16 @@ class SearchTweet():
         return q + f'{keyword}{val}'
 
     def build_params(self, search_params):
+        """
+            search params format - {
+                'q': {
+                    'author': <name of author>,
+                    ['filters': <filter tweets>],
+                    ['hashtag': <#hashtag>]
+                },
+                ['count':<number of tweets to fetch>]
+            }
+        """
         if self.since_id:
             self.params['since_id'] = self.since_id
         if self.max_id:
@@ -143,12 +154,17 @@ class SearchTweet():
         return r.json()
 
     def make_row(self, tweet_resp):
+        # "Fri Feb 07 16:27:35 +0000 2020"
         tweet_row = {}
         tweet_row['tweet_id'] = tweet_resp['json_data']['id']
         tweet_row['author'] = tweet_resp['json_data']['user']['screen_name']
         tweet_row['author_id'] = tweet_resp['json_data']['user']['id']
+        tweet_row['tweet_text'] = tweet_resp['json_data']['text']
+        tweet_row['tweet_date'] = datetime.strptime(
+            tweet_resp['json_data']['created_at'], "%a %b %d %H:%M:%S %z %Y"
+        )
         tweet_row['json_data'] = json.dumps(tweet_resp['json_data'])
-        tweet_row['search_params'] = str(tweet_resp['search_params'])
+        tweet_row['search_params'] = json.dumps(tweet_resp['search_params'])
         return tweet_row
 
     def write_to_db(self, tweets):
@@ -210,6 +226,4 @@ while(1):
     if len(ready) == len(authors):
         break
 
-for each in ready[1]:
-    print(each.keys())
-search_obj.write_to_db(ready[1])
+search_obj.write_to_db(ready[2])
