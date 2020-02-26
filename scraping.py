@@ -2,13 +2,20 @@ import requests
 import json
 import os
 import base64
+from functools import reduce
 from urllib.parse import urljoin, quote_plus
 from datetime import datetime
-from nba_ws.models import Tweet
+from nba_ws.models import Tweet, SearchField
 from nba_ws import db
-from celery_app import celery
+from celery import Celery
+from celery.schedules import crontab
 
 base_url = 'https://api.twitter.com/'
+celery = Celery(
+    'scraping',
+    broker='redis://localhost:6379/0',
+    backend='redis://localhost:6379/0'
+)
 
 
 class TwitterOAuth2():
@@ -117,11 +124,13 @@ class SearchTweet():
             self.build_params(search_params)
             resps = self.search()
             if not resps['json_data']['statuses']:
+                self.max_id = None
                 break
-            tweet = {}
-            tweet['json_data'] = resps['json_data']['statuses']
-            tweet['search_params'] = resps['search_params']
-        self.max_id = None
+            for status in resps['json_data']['statuses']:
+                tweet = {}
+                tweet['json_data'] = status
+                tweet['search_params'] = resps['search_params']
+                tweets.append(tweet)
         return tweets
 
     def search(self):
@@ -130,7 +139,7 @@ class SearchTweet():
             params=self.params,
             headers=self.headers
         )
-        print(r.url)
+        print(r.url, r.status_code)
         assert r.status_code in [200]
         if r.json()['statuses']:
             self.max_id = min(
@@ -139,6 +148,7 @@ class SearchTweet():
         response = {}
         response['json_data'] = r.json()
         response['search_params'] = self.params
+        self.params = {}
         return response
 
     def get_rate_limit_status(self, resources=None):
@@ -205,25 +215,43 @@ def get_tweets(bearer_token, search_params):
     return tweets
 
 
+@celery.task
+def get_data_async(bearer_token):
+    search_obj = SearchTweet(bearer_token)
+    search_params = SearchField.query.all()
+    tweets = [
+        get_tweets.delay(
+            bearer_token, json.loads(search_param)
+        ) for search_param in search_params
+    ]
+    while(1):
+        ready = [tweet.result for tweet in tweets if tweet.ready()]
+        if len(ready) == len(tweets):
+            break
+    data = list(reduce(lambda x, y: x + y, ready))
+    search_obj.write_to_db(data)
+
+
 auth = TwitterOAuth2()
 
-authors = [
-    'wojespn',
-    'ShamsCharania',
-    'ZachLowe_NBA'
-]
+celery.conf.beat_schedule = {
+    'get-data-periodic': {
+        'task': 'scraping.get_data_periodic',
+        'schedule': crontab(minute=0, hour='*/4'),
+        'args': (auth.bearer_token,)
+    },
+}
 
 
-tweets = [get_tweets.delay(
-    auth.bearer_token, make_search_params(author)
-) for author in authors]
-
-
-search_obj = SearchTweet(auth.bearer_token)
-
-while(1):
-    ready = [tweet.result for tweet in tweets if tweet.ready()]
-    if len(ready) == len(authors):
-        break
-
-search_obj.write_to_db(ready[2])
+@celery.task
+def get_data_periodic(bearer_token):
+    search_obj = SearchTweet(bearer_token)
+    search_params = SearchField.query.all()
+    tweets = [
+        search_obj.get_tweets(
+            json.loads(search_param.search_field)
+        ) for search_param in search_params
+    ]
+    data = list(reduce(lambda x, y: x + y, tweets))
+    search_obj.write_to_db(data)
+    print(f"{len(data)} record(s) added to db.")

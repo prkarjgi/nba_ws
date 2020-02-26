@@ -33,11 +33,13 @@ class Tweet(db.Model):
 class SearchField(db.Model):
     __tablename__ = 'nba-ws-search_field'
     id = db.Column(db.Integer, primary_key=True)
+    author = db.Column(db.String(), unique=True)
     search_field = db.Column(db.Text, unique=True)
     datetime_added = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def __init__(self, search_field):
+    def __init__(self, search_field, author):
         self.search_field = search_field
+        self.author = author
 
     def __repr__(self):
         return f"<SearchField({self.id}, {self.search_field})>"

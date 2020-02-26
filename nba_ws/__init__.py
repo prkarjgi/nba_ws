@@ -1,7 +1,7 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_restful import Api, Resource
+from flask_restful import Api, Resource, reqparse, fields, marshal
 import os
 import json
 
@@ -17,41 +17,118 @@ api = Api(app)
 from nba_ws.models import Tweet, SearchField
 
 
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Not found'}), 404
+
+
+sf_format = {
+    'search_field': fields.String,
+    'author': fields.String,
+    'datetime_added': fields.DateTime,
+    'uri': fields.Url('search_field')
+}
+
+
 class TweetListAPI(Resource):
     def __init__(self):
-        pass
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument(
+            'author',
+            type=list,
+            location='json'
+        )
+        super(TweetListAPI, self).__init__()
 
     def get(self):
-        tweets = Tweet.query.order_by(Tweet.tweet_id.desc()).all()
+        args = self.reqparse.parse_args()
+        author = args['author']
+        if author:
+            tweets = Tweet.query.filter(
+                Tweet.author.in_(author)
+            ).order_by(Tweet.tweet_id.desc()).all()
+        else:
+            tweets = Tweet.query.order_by(Tweet.tweet_id.desc()).all()
+        if not tweets:
+            abort(404)
         formatted_tweets = [clean_tweet(tweet) for tweet in tweets]
         return jsonify({'tweets': formatted_tweets})
 
 
 class SearchFieldAPI(Resource):
     def __init__(self):
-        pass
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument(
+            'search_field',
+            type=dict,
+            location='json'
+        )
+        super(SearchFieldAPI, self).__init__()
 
-    def get(self):
-        pass
+    def get(self, search_id):
+        search_field = SearchField.query.filter_by(
+            id=search_id
+        ).first()
+        if not search_field:
+            abort(404)
+        resp = {}
+        resp['search_field'] = json.loads(search_field.search_field)
+        resp['author'] = search_field.author
+        resp['datetime_added'] = search_field.datetime_added
+        resp['search_id'] = search_id
+        return {'sf': marshal(resp, sf_format)}
 
-    def put(self):
-        pass
+    def put(self, search_id):
+        args = self.reqparse.parse_args()
+        if not args['search_field']:
+            abort(404)
+        search_field = SearchField.query.filter_by(id=search_id).first()
+        if not search_field:
+            abort(404)
+        search_field.search_field = json.dumps(args['search_field'])
+        search_field.author = args['search_field']['q']['author']
+        db.session.add(search_field)
+        db.session.commit()
+        return 202
 
-    def delete(self):
-        pass
+    def delete(self, search_id):
+        search_field = SearchField.query.filter_by(id=search_id).first()
+        if not search_field:
+            abort(404)
+        db.session.delete(search_field)
+        db.session.commit()
+        return 202
 
 
 class SearchFieldListAPI(Resource):
     def __init__(self):
-        pass
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument(
+            'search_field',
+            type=dict,
+            location='json'
+        )
+        super(SearchFieldListAPI, self).__init__()
 
     def get(self):
         search_fields = SearchField.query.order_by(SearchField.id.desc()).all()
-        formatted_sf = [clean_search_field(sf) for sf in search_fields]
+        formatted_sf = [
+            marshal(clean_search_field(sf), sf_format) for sf in search_fields
+        ]
         return jsonify({'search_fields': formatted_sf})
 
     def post(self):
-        pass
+        args = self.reqparse.parse_args()
+        sf = args['search_field']
+        search_field = SearchField(json.dumps(sf), args['author'])
+        db.session.add(search_field)
+        db.session.commit()
+        resp = {}
+        resp['search_field'] = json.dumps(sf)
+        resp['author'] = args['search_field']['q']['author']
+        resp['datetime_added'] = search_field.datetime_added
+        resp['search_id'] = search_field.id
+        return {'sf': marshal(resp, sf_format)}, 201
 
 
 def clean_tweet(tweet_row):
@@ -70,8 +147,9 @@ def clean_tweet(tweet_row):
 
 def clean_search_field(search_field_row):
     search_field = {}
-    search_field['id'] = search_field_row.id
+    search_field['search_id'] = search_field_row.id
     search_field['search_field'] = json.loads(search_field_row.search_field)
+    search_field['author'] = search_field_row.author
     search_field['datetime_added'] = search_field_row.datetime_added
     return search_field
 
@@ -81,7 +159,9 @@ api.add_resource(
     SearchFieldListAPI, '/todo/api/v1.0/search', endpoint='search_fields'
 )
 api.add_resource(
-    SearchFieldAPI, '/todo/api/v1.0/search/<int:id>', endpoint='search_field'
+    SearchFieldAPI,
+    '/todo/api/v1.0/search/<int:search_id>',
+    endpoint='search_field'
 )
 
 db.create_all()
