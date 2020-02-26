@@ -14,4 +14,4 @@ __pycache__/
 
 # miscellaneous
 response_json.json
-
+celerybeat*
