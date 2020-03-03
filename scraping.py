@@ -181,6 +181,7 @@ class SearchTweet():
         tweet_rows = [Tweet(**self.make_row(tweet)) for tweet in tweets]
         db.session.add_all(tweet_rows)
         db.session.commit()
+        print(f"{len(tweet_rows)} record(s) added to table.")
 
 
 def make_search_params(author, filters=None, hashtag=None, count=None):
@@ -215,29 +216,12 @@ def get_tweets(bearer_token, search_params):
     return tweets
 
 
-@celery.task
-def get_data_async(bearer_token):
-    search_obj = SearchTweet(bearer_token)
-    search_params = SearchField.query.all()
-    tweets = [
-        get_tweets.delay(
-            bearer_token, json.loads(search_param)
-        ) for search_param in search_params
-    ]
-    while(1):
-        ready = [tweet.result for tweet in tweets if tweet.ready()]
-        if len(ready) == len(tweets):
-            break
-    data = list(reduce(lambda x, y: x + y, ready))
-    search_obj.write_to_db(data)
-
-
 auth = TwitterOAuth2()
 
 celery.conf.beat_schedule = {
     'get-data-periodic': {
         'task': 'scraping.get_data_periodic',
-        'schedule': crontab(minute=0, hour='*/4'),
+        'schedule': crontab(minute=0, hour='*/2'),
         'args': (auth.bearer_token,)
     },
 }
@@ -253,5 +237,23 @@ def get_data_periodic(bearer_token):
         ) for search_param in search_params
     ]
     data = list(reduce(lambda x, y: x + y, tweets))
-    search_obj.write_to_db(data)
-    print(f"{len(data)} record(s) added to db.")
+    if len(data) > 0:
+        search_obj.write_to_db(data)
+
+
+@celery.task(bind=True)
+def get_data_async(bearer_token):
+    search_obj = SearchTweet(bearer_token)
+    search_params = SearchField.query.all()
+    tweets = [
+        get_tweets.delay(
+            bearer_token, json.loads(search_param.search_field)
+        ) for search_param in search_params
+    ]
+    while(1):
+        ready = [tweet.result for tweet in tweets if tweet.ready()]
+        if len(ready) == len(tweets):
+            break
+    data = list(reduce(lambda x, y: x + y, ready))
+    if len(data) > 0:
+        search_obj.write_to_db(data)
