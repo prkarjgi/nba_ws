@@ -12,6 +12,9 @@ __pycache__/
 *.db
 *.rdb
 
+# logs
+*.[Ll]og
+
 # miscellaneous
 response_json.json
 celerybeat*
