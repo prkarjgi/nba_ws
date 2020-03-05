@@ -1,4 +1,4 @@
-from nba_ws import db
+from nba_ws import db, app
 from nba_ws.celery import celery
 from nba_ws.models import SearchField, Tweet
 from functools import reduce
@@ -6,6 +6,11 @@ from datetime import datetime
 from urllib.parse import urljoin
 import json
 import requests
+import logging
+
+logging.basicConfig(filename='tasks.log')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class SearchTweet():

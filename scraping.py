@@ -257,3 +257,8 @@ def get_data_async(bearer_token):
     data = list(reduce(lambda x, y: x + y, ready))
     if len(data) > 0:
         search_obj.write_to_db(data)
+
+
+if __name__ == "__main__":
+    print('celery application name: ', celery.main)
+    print('get_data_async name: ', get_data_async.name)
