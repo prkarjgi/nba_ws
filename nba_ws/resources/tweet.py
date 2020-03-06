@@ -24,6 +24,6 @@ class TweetListAPI(Resource):
         else:
             tweets = Tweet.query.order_by(Tweet.tweet_id.desc()).all()
         if not tweets:
-            abort(404)
+            abort(404, description='Not found')
         formatted_tweets = [clean_tweet(tweet) for tweet in tweets]
         return jsonify({'tweets': formatted_tweets})

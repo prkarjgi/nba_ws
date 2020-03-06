@@ -18,15 +18,11 @@ api = Api(app)
 
 from nba_ws.models import Tweet, SearchField
 from nba_ws.tasks import get_data_async, get_data_periodic
+from nba_ws.errors import handlers
 from nba_ws.common.util import TwitterOAuth2
 from nba_ws.resources.search import SearchTriggerAPI, TaskStatusAPI,\
     SearchFieldAPI, SearchFieldListAPI
 from nba_ws.resources.tweet import TweetListAPI
-
-
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({'error': 'Not found'}), 404
 
 
 oauth = TwitterOAuth2()

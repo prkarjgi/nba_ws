@@ -1,6 +1,6 @@
 from flask import abort, jsonify
 from flask_restful import Resource, marshal, reqparse
-from nba_ws import db, celery
+from nba_ws import db, celery, app
 from nba_ws.models import SearchField
 from nba_ws.tasks import get_data_async
 from nba_ws.common.util import TwitterOAuth2, status_format,\
@@ -23,7 +23,7 @@ class SearchFieldAPI(Resource):
             id=search_id
         ).first()
         if not search_field:
-            abort(404)
+            abort(404, description='Not found')
         resp = {}
         resp['search_field'] = json.loads(search_field.search_field)
         resp['author'] = search_field.author
@@ -34,10 +34,10 @@ class SearchFieldAPI(Resource):
     def put(self, search_id):
         args = self.reqparse.parse_args()
         if not args['search_field']:
-            abort(404)
+            abort(404, description='\'search_field\' is a necessary parameter')
         search_field = SearchField.query.filter_by(id=search_id).first()
         if not search_field:
-            abort(404)
+            abort(404, description='Not found')
         search_field.search_field = json.dumps(args['search_field'])
         search_field.author = args['search_field']['q']['author']
         db.session.add(search_field)
@@ -47,7 +47,7 @@ class SearchFieldAPI(Resource):
     def delete(self, search_id):
         search_field = SearchField.query.filter_by(id=search_id).first()
         if not search_field:
-            abort(404)
+            abort(404, description='Not found')
         db.session.delete(search_field)
         db.session.commit()
         return 202
