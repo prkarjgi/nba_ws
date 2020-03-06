@@ -1,6 +1,6 @@
 from flask import abort, jsonify
 from flask_restful import Resource, marshal, reqparse
-from nba_ws import db, celery, app
+from nba_ws import db, celery
 from nba_ws.models import SearchField
 from nba_ws.tasks import get_data_async
 from nba_ws.common.util import TwitterOAuth2, status_format,\

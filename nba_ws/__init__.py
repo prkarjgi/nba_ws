@@ -1,7 +1,6 @@
-from flask import Flask, jsonify, Blueprint
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_restful import Api
 from nba_ws.celery import celery
 from celery.schedules import crontab
 import os
@@ -33,6 +32,9 @@ def create_app():
 
     from nba_ws.resources import api_bp
     app.register_blueprint(api_bp)
+
+    from nba_ws.errors import errors_bp
+    app.register_blueprint(errors_bp)
 
     return app
 
