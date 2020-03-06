@@ -1,6 +1,6 @@
 from flask import abort, jsonify
 from flask_restful import Resource, marshal, reqparse
-from nba_ws import db
+from nba_ws import db, celery
 from nba_ws.models import SearchField
 from nba_ws.tasks import get_data_async
 from nba_ws.common.util import TwitterOAuth2, status_format,\
@@ -92,10 +92,11 @@ class SearchTriggerAPI(Resource):
     def get(self):
         bearer_token = TwitterOAuth2().bearer_token
         result = get_data_async.delay(bearer_token)
-        # response = {'state': result.state}
-        task = {'task_id': result.id}
+        task = {
+            'task_id': result.id
+        }
         return jsonify({
-            'Check task status at': marshal(task, status_format)
+            'task_details': marshal(task, status_format)
         })
 
 
@@ -104,7 +105,7 @@ class TaskStatusAPI(Resource):
         super(TaskStatusAPI, self).__init__()
 
     def get(self, task_id):
-        task = get_data_async.AsyncResult(task_id)
+        task = celery.AsyncResult(task_id)
         if task.state == 'SUCCESS':
             response = {
                 'state': task.state,

@@ -1,12 +1,12 @@
-import requests
-import json
-import os
-import base64
 from urllib.parse import quote_plus, urljoin
 from flask_restful import fields
 from nba_ws import db
 from nba_ws.models import Tweet
 from datetime import datetime
+import requests
+import json
+import os
+import base64
 
 
 class TwitterOAuth2():
@@ -202,9 +202,9 @@ sf_format = {
     'search_field': fields.String,
     'author': fields.String,
     'datetime_added': fields.DateTime,
-    'uri': fields.Url('search_field')
+    'uri': fields.Url('search_field', absolute=True)
 }
 
 status_format = {
-    'uri': fields.Url('taskstatus')
+    'task_status_uri': fields.Url('taskstatus', absolute=True)
 }
