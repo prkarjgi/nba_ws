@@ -73,7 +73,7 @@ class SearchFieldListAPI(Resource):
     def post(self):
         args = self.reqparse.parse_args()
         sf = args['search_field']
-        search_field = SearchField(json.dumps(sf), args['author'])
+        search_field = SearchField(json.dumps(sf), sf['q']['author'])
         db.session.add(search_field)
         db.session.commit()
         resp = {}

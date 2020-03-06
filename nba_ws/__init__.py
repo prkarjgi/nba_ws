@@ -1,8 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from nba_ws.celery import celery
-from celery.schedules import crontab
 import os
 
 
@@ -10,22 +8,10 @@ db = SQLAlchemy()
 migrate = Migrate()
 
 
-# from nba_ws.tasks import get_data_async, get_data_periodic
-from nba_ws.common.util import TwitterOAuth2
-oauth = TwitterOAuth2()
-
-celery.conf.beat_schedule = {
-    'get-data-periodic': {
-        'task': 'nba_ws.tasks.get_data_periodic',
-        'schedule': crontab(minute=0, hour='*/2'),
-        'args': (oauth.bearer_token,)
-    },
-}
-
-
-def create_app():
+def create_app(config=os.getenv('APP_SETTINGS')):
     app = Flask(__name__)
-    app.config.from_object(os.getenv('APP_SETTINGS'))
+    app.config.from_object(config)
+    # print(app.config.items())
 
     db.init_app(app)
     migrate.init_app(app, db)
