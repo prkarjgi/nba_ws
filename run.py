@@ -1,4 +1,6 @@
-from nba_ws import app
+from nba_ws import create_app
+
+app = create_app()
 
 if __name__ == "__main__":
     app.run()

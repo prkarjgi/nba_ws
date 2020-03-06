@@ -202,9 +202,9 @@ sf_format = {
     'search_field': fields.String,
     'author': fields.String,
     'datetime_added': fields.DateTime,
-    'uri': fields.Url('search_field', absolute=True)
+    'uri': fields.Url('resources.search_field', absolute=True)
 }
 
 status_format = {
-    'task_status_uri': fields.Url('taskstatus', absolute=True)
+    'task_status_uri': fields.Url('resources.taskstatus', absolute=True)
 }
