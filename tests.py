@@ -143,7 +143,34 @@ class TestSearchAPI(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
 
     def test_search_delete(self):
-        pass
+        data = (
+            {
+                'search_field': {
+                    'q': {
+                        'author': 'wojespn'
+                    }
+                }
+            },
+            {
+                'search_field': {
+                    'q': {
+                        'author': 'ShamsCharania'
+                    }
+                }
+            }
+        )
+        self.add_search_fields(data)
+        with self.app.test_client() as client:
+            search_uri = f"{BASE_URL}/search/1"
+            response = client.delete(
+                search_uri
+            )
+            self.assertEqual(response.status_code, 200)
+
+            response = client.get(
+                search_uri
+            )
+            self.assertEqual(response.status_code, 404)
 
     def add_search_fields(self, search_fields: Tuple):
         search_uri = f"{BASE_URL}/search"
