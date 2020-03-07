@@ -42,7 +42,7 @@ class SearchFieldAPI(Resource):
         search_field.author = args['search_field']['q']['author']
         db.session.add(search_field)
         db.session.commit()
-        return 202
+        return 200
 
     def delete(self, search_id):
         search_field = SearchField.query.filter_by(id=search_id).first()
@@ -50,7 +50,7 @@ class SearchFieldAPI(Resource):
             abort(404, description='Not found')
         db.session.delete(search_field)
         db.session.commit()
-        return 202
+        return 200
 
 
 class SearchFieldListAPI(Resource):

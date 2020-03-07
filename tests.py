@@ -1,5 +1,6 @@
 from nba_ws import create_app, db
 from config import TestingConfig
+from typing import List, Tuple
 import unittest
 import json
 
@@ -20,11 +21,29 @@ class TestSearchAPI(unittest.TestCase):
         self.app_context.pop()
 
     def test_search_get_all(self):
+        data = (
+            {
+                'search_field': {
+                    'q': {
+                        'author': 'wojespn'
+                    }
+                }
+            },
+            {
+                'search_field': {
+                    'q': {
+                        'author': 'ShamsCharania'
+                    }
+                }
+            }
+        )
+        self.add_search_fields(data)
         with self.app.test_client() as client:
             search_uri = f"{BASE_URL}/search"
             response = client.get(search_uri)
             data = json.loads(response.get_data())
             self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(data['search_fields']), 2)
 
     def test_search_post(self):
         with self.app.test_client() as client:
@@ -97,11 +116,62 @@ class TestSearchAPI(unittest.TestCase):
             self.assertEqual(response.status_code, 404)
 
     def test_search_put(self):
-        pass
+        data = (
+            {
+                'search_field': {
+                    'q': {
+                        'author': 'wojespn'
+                    }
+                }
+            },
+        )
+        self.add_search_fields(data)
+        with self.app.test_client() as client:
+            search_uri = f"{BASE_URL}/search/1"
+            json_data = {
+                'search_field': {
+                    'q': {
+                        'author': 'ShamsCharania'
+                    }
+                }
+            }
+            response = client.put(
+                search_uri,
+                data=json.dumps(json_data),
+                content_type='application/json'
+            )
+            self.assertEqual(response.status_code, 200)
 
     def test_search_delete(self):
         pass
 
+    def add_search_fields(self, search_fields: Tuple):
+        search_uri = f"{BASE_URL}/search"
+        with self.app.test_client() as client:
+            for search_field in search_fields:
+                response = client.post(
+                    search_uri,
+                    data=json.dumps(search_field),
+                    content_type='application/json'
+                )
+
+
+def search_suite():
+    suite = unittest.TestSuite()
+    suite.addTest(TestSearchAPI('test_search_get_all'))
+    suite.addTest(TestSearchAPI('test_search_post'))
+    suite.addTest(TestSearchAPI('test_search_get_one'))
+    suite.addTest(TestSearchAPI('test_search_put'))
+    suite.addTest(TestSearchAPI('test_search_delete'))
+    return suite
+
+
+def final_suite(test_suites: Tuple):
+    final_suite = unittest.TestSuite()
+    final_suite.addTests(test_suites)
+    return final_suite
+
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(final_suite((search_suite(),)))
