@@ -105,7 +105,7 @@ class TaskStatusAPI(Resource):
         super(TaskStatusAPI, self).__init__()
 
     def get(self, task_id):
-        task = celery.AsyncResult(task_id)
+        task = get_data_async.AsyncResult(task_id)
         if task.state == 'SUCCESS':
             response = {
                 'state': task.state,
