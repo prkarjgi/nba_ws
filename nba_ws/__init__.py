@@ -1,7 +1,23 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
+"""NBA-WebService Application Package
+
+Package contents:
+    Application factory: create_app
+
+    Subpackages:
+        common: Defines helper functions and classes.
+        errors: Defines errorhandlers.
+        resources: Defines API Resources.
+
+    Modules:
+        celery.py: Set-up and config set-up for Celery.
+        models.py: Defines of database Models.
+        tasks.py: Defines of Celery tasks.
+"""
 import os
+
+from flask import Flask
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 
 
 db = SQLAlchemy()

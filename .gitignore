@@ -17,5 +17,6 @@ __pycache__/
 *.[Ll]og
 
 # miscellaneous
+.env
 response_json.json
 celerybeat*

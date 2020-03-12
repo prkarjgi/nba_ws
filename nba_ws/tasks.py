@@ -1,17 +1,37 @@
+"""Module containing Celery tasks used in the application.
+
+Tasks defined:
+    get_tweets: retrieve all new tweets for a given search parameter arg.
+    get_data_periodic: retrieves all new tweets for all SearchField rows run
+        periodically by the celery beat(see nba_ws.celery.py for more details).
+    get_data_async: retrieves all new tweets for all SearchField rows,
+        which can be run manually using the SearchTriggerAPI web resource
+        (see class SearchTriggerAPI from nba_ws.resources.search for more
+        details).
+"""
+from functools import reduce
+import json
+
 from nba_ws.celery import celery
 from nba_ws.models import SearchField
 from nba_ws.common.util import SearchTweet
-from functools import reduce
-import json
-# import logging
-
-# logging.basicConfig(filename='tasks.log')
-# logger = logging.getLogger(__name__)
-# logger.setLevel(logging.INFO)
 
 
 @celery.task
 def get_tweets(bearer_token, search_params):
+    """Function used to search for new Tweets of a Search Field.
+
+    This function is used for performing a Search API request to retrieve
+    new tweets for a given search_param argument.
+
+    Args:
+        bearer_token: string, OAuth2 token used to authenticate requests made
+            to Twitter Search API.
+        search_params: dict, parameters passed to the request to Search API.
+
+    Returns:
+        List of tweets(each tweet is stored as a dict).
+    """
     search_object = SearchTweet(bearer_token)
     tweets = []
     search_object.get_since_id(search_params['q']['author'])
@@ -31,6 +51,18 @@ def get_tweets(bearer_token, search_params):
 
 @celery.task
 def get_data_periodic(bearer_token):
+    """Function used to retrieve new tweets for all Search Fields.
+
+    This function is used by celery beat to periodically search Twitter for
+    new tweets by any of the Search Fields.
+
+    Args:
+        bearer_token: string, OAuth2 token used to authenticate requests made
+            to Twitter Search API.
+
+    Returns:
+        None
+    """
     search_obj = SearchTweet(bearer_token)
     search_params = SearchField.query.all()
     tweets = [
@@ -45,6 +77,19 @@ def get_data_periodic(bearer_token):
 
 @celery.task(bind=True)
 def get_data_async(self, bearer_token):
+    """Function used to retrieve new tweets for all Search Fields.
+
+    This function is used by the SearchTriggerAPI resource of the application
+    to manually run a search to retrieve new tweets for all Search Fields in
+    the SearchField model.
+
+    Args:
+        bearer_token: string, OAuth2 token used to authenticate requests made
+            to Twitter Search API.
+
+    Returns:
+        None
+    """
     search_obj = SearchTweet(bearer_token)
     search_params = SearchField.query.all()
     tweets = [

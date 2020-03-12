@@ -1,4 +1,7 @@
+"""This module defines the error handlers used for custom error handling.
+"""
 from flask import jsonify, make_response
+
 from nba_ws.errors import errors_bp
 
 

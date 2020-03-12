@@ -1,7 +1,14 @@
-from celery import Celery
-from nba_ws.common.util import TwitterOAuth2
-from celery.schedules import crontab
+"""Module used to handle Celery setup.
+
+Instantiation of Celery object used in the application, setting up celery
+configs and the celery beat scheduling settings.
+"""
 import os
+
+from celery import Celery
+from celery.schedules import crontab
+
+from nba_ws.common.util import TwitterOAuth2
 
 celery = Celery('nba_ws')
 
