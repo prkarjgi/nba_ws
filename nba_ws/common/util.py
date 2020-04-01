@@ -25,7 +25,7 @@ from nba_ws import db
 from nba_ws.models import Tweet
 
 
-class TwitterOAuth2():
+class TwitterOAuth2(object):
     """Generates OAuth2 bearer token used to authenticate Twitter API requests.
 
     Attributes:
@@ -93,7 +93,7 @@ class TwitterOAuth2():
         self.invalidate_resp = r
 
 
-class SearchTweet():
+class SearchTweet(object):
     """Class used to retrieve Tweets from the Twitter API.
 
     This class is used to perform requests to Twitter's Search API and write

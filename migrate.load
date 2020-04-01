@@ -1,0 +1,6 @@
+load database
+	from sqlite:////Users/pranavkarajgikar/Documents/Work/Projects/Web/NBA-WebService/nba-ws.db
+	into postgresql://pranavkarajgikar:postgres_psql@localhost:5432/nba_webservice
+
+ with include drop, create tables, create indexes, reset sequences
+   set work_mem to '16MB', maintenance_work_mem to '512 MB';

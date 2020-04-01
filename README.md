@@ -1,3 +1,3 @@
-# Application to get Twitter data for the NBA
+# Application to get NBA related Twitter data
 
-## 
+##
