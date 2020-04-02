@@ -5,14 +5,18 @@ configs and the celery beat scheduling settings.
 """
 import os
 
-from celery import Celery
+# from celery import Celery
 from celery.schedules import crontab
 
+from nba_ws import create_app, celery
 from nba_ws.common.util import TwitterOAuth2
 
-celery = Celery('nba_ws')
+# celery = Celery('nba_ws')
 
-celery.config_from_object(os.getenv('CELERY_CONFIG'))
+# celery.config_from_object(os.getenv('CELERY_CONFIG'))
+
+app = create_app()
+app.app_context().push()
 
 oauth = TwitterOAuth2()
 celery.conf.beat_schedule = {

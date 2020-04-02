@@ -18,15 +18,18 @@ import os
 from flask import Flask
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-
+from celery import Celery
 
 db = SQLAlchemy()
 migrate = Migrate()
+celery = Celery(__name__)
 
 
 def create_app(config=os.getenv('APP_SETTINGS')):
     app = Flask(__name__)
     app.config.from_object(config)
+
+    celery.config_from_object(os.getenv('CELERY_CONFIG'))
 
     db.init_app(app)
     migrate.init_app(app, db)

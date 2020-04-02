@@ -7,6 +7,7 @@ Models:
 """
 from datetime import datetime
 
+from sqlalchemy.dialects.postgresql import JSONB
 from nba_ws import db
 
 
@@ -25,15 +26,17 @@ class Tweet(db.Model):
             to retrieve the tweet from Twitter.
     """
     __tablename__ = 'nba-ws-tweet'
-    id = db.Column(db.Integer, primary_key=True)
-    tweet_id = db.Column(db.Integer, unique=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    tweet_id = db.Column(db.BigInteger, unique=True, nullable=False)
     author = db.Column(db.String())
     author_id = db.Column(db.Integer)
     tweet_text = db.Column(db.String())
     tweet_date = db.Column(db.DateTime)
-    json_data = db.Column(db.Text)
-    search_params = db.Column(db.Text)
-    datetime_added = db.Column(db.DateTime, default=datetime.utcnow)
+    json_data = db.Column(JSONB)
+    search_params = db.Column(JSONB)
+    datetime_added = db.Column(
+        db.DateTime(timezone=True), default=datetime.utcnow
+    )
 
     def __init__(
         self, tweet_id, author, author_id,
@@ -67,10 +70,12 @@ class SearchField(db.Model):
             parameters serialized to json.
     """
     __tablename__ = 'nba-ws-search_field'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     author = db.Column(db.String(), unique=True)
-    search_field = db.Column(db.Text, unique=True)
-    datetime_added = db.Column(db.DateTime, default=datetime.utcnow)
+    search_field = db.Column(JSONB, unique=True)
+    datetime_added = db.Column(
+        db.DateTime(timezone=True), default=datetime.utcnow
+    )
 
     def __init__(self, search_field, author):
         self.search_field = search_field

@@ -12,7 +12,8 @@ Tasks defined:
 from functools import reduce
 import json
 
-from nba_ws.celery import celery
+from nba_ws import celery
+# from nba_ws.celery import celery
 from nba_ws.models import SearchField
 from nba_ws.common.util import SearchTweet
 
